@@ -10,9 +10,11 @@ export const checkKarmaBlacklist = async (email: string): Promise<boolean> => {
         },
       }
     );
-    return response.data?.data !== null;
+    const data = response.data?.data;
+    return data !== null && data !== undefined;
   } catch (error: any) {
     if (error.response?.status === 404) return false;
-    throw new Error('Karma check failed');
+    console.error('Karma check error:', error.message);
+    return false;
   }
 };
