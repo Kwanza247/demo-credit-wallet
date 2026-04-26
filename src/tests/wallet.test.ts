@@ -14,25 +14,29 @@ beforeAll(async () => {
   mockedKarma.mockResolvedValue(false);
 
   await request(app).post('/api/v1/auth/register').send({
-    full_name: 'User A', email: 'usera@test.com', password: 'pass123'
+    full_name: 'User A', email: 'usera@test.com', password: 'pass123',
   });
   await request(app).post('/api/v1/auth/register').send({
-    full_name: 'User B', email: 'userb@test.com', password: 'pass123'
+    full_name: 'User B', email: 'userb@test.com', password: 'pass123',
   });
 
-  const resA = await request(app).post('/api/v1/auth/login').send({ email: 'usera@test.com', password: 'pass123' });
-  const resB = await request(app).post('/api/v1/auth/login').send({ email: 'userb@test.com', password: 'pass123' });
+  const resA = await request(app).post('/api/v1/auth/login').send({
+    email: 'usera@test.com', password: 'pass123',
+  });
+  const resB = await request(app).post('/api/v1/auth/login').send({
+    email: 'userb@test.com', password: 'pass123',
+  });
 
   tokenA = resA.body.data.token;
   tokenB = resB.body.data.token;
-});
+}, 60000);
 
 afterAll(async () => {
   await db('transactions').del();
   await db('wallets').del();
   await db('users').del();
   await db.destroy();
-});
+}, 30000);
 
 describe('Wallet Operations', () => {
   it('should fund wallet', async () => {
@@ -42,7 +46,7 @@ describe('Wallet Operations', () => {
       .send({ amount: 5000 });
     expect(res.status).toBe(200);
     expect(res.body.data.balance).toBe(5000);
-  });
+  }, 30000);
 
   it('should reject funding with 0 amount', async () => {
     const res = await request(app)
@@ -50,7 +54,14 @@ describe('Wallet Operations', () => {
       .set('Authorization', `Bearer ${tokenA}`)
       .send({ amount: 0 });
     expect(res.status).toBe(400);
-  });
+  }, 30000);
+
+  it('should reject funding without auth token', async () => {
+    const res = await request(app)
+      .post('/api/v1/wallet/fund')
+      .send({ amount: 1000 });
+    expect(res.status).toBe(401);
+  }, 30000);
 
   it('should transfer funds', async () => {
     const res = await request(app)
@@ -58,7 +69,7 @@ describe('Wallet Operations', () => {
       .set('Authorization', `Bearer ${tokenA}`)
       .send({ recipient_email: 'userb@test.com', amount: 1000 });
     expect(res.status).toBe(200);
-  });
+  }, 30000);
 
   it('should reject transfer with insufficient funds', async () => {
     const res = await request(app)
@@ -67,7 +78,15 @@ describe('Wallet Operations', () => {
       .send({ recipient_email: 'userb@test.com', amount: 999999 });
     expect(res.status).toBe(400);
     expect(res.body.message).toContain('Insufficient');
-  });
+  }, 30000);
+
+  it('should reject transfer to self', async () => {
+    const res = await request(app)
+      .post('/api/v1/wallet/transfer')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({ recipient_email: 'usera@test.com', amount: 100 });
+    expect(res.status).toBe(400);
+  }, 30000);
 
   it('should withdraw funds', async () => {
     const res = await request(app)
@@ -75,7 +94,15 @@ describe('Wallet Operations', () => {
       .set('Authorization', `Bearer ${tokenA}`)
       .send({ amount: 500 });
     expect(res.status).toBe(200);
-  });
+  }, 30000);
+
+  it('should reject withdrawal with insufficient funds', async () => {
+    const res = await request(app)
+      .post('/api/v1/wallet/withdraw')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({ amount: 999999 });
+    expect(res.status).toBe(400);
+  }, 30000);
 
   it('should get balance', async () => {
     const res = await request(app)
@@ -83,5 +110,5 @@ describe('Wallet Operations', () => {
       .set('Authorization', `Bearer ${tokenA}`);
     expect(res.status).toBe(200);
     expect(res.body.data.balance).toBeDefined();
-  });
+  }, 30000);
 });
