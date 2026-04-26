@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import db from '../config/knex';
 import { checkKarmaBlacklist } from './karma_service';
 
@@ -16,10 +16,10 @@ export const registerUser = async (full_name: string, email: string, password: s
   const hashed = await bcrypt.hash(password, 10);
 
   return db.transaction(async (trx) => {
-    const userId = uuidv4();
+    const userId = randomUUID();
     await trx('users').insert({ id: userId, full_name, email, password: hashed });
 
-    const walletId = uuidv4();
+    const walletId = randomUUID();
     await trx('wallets').insert({ id: walletId, user_id: userId, balance: 0 });
 
     return { userId, walletId };
