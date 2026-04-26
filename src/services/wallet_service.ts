@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import db from '../config/knex';
 
 export const fundWallet = async (userId: string, amount: number) => {
@@ -12,12 +12,12 @@ export const fundWallet = async (userId: string, amount: number) => {
     await trx('wallets').where({ id: wallet.id }).update({ balance: newBalance });
 
     await trx('transactions').insert({
-      id: uuidv4(),
+      id: randomUUID(),
       wallet_id: wallet.id,
       type: 'credit',
       amount,
       description: 'Wallet funding',
-      reference: uuidv4(),
+      reference: randomUUID(),
     });
 
     return { balance: newBalance };
@@ -37,7 +37,7 @@ export const transferFunds = async (senderId: string, recipientEmail: string, am
     if (recipient.id === senderId) throw new Error('Cannot transfer to yourself');
 
     const recipientWallet = await trx('wallets').where({ user_id: recipient.id }).first();
-    const ref = uuidv4();
+    const ref = randomUUID();
 
     await trx('wallets')
       .where({ id: senderWallet.id })
@@ -48,8 +48,8 @@ export const transferFunds = async (senderId: string, recipientEmail: string, am
       .update({ balance: parseFloat(recipientWallet.balance) + amount });
 
     await trx('transactions').insert([
-      { id: uuidv4(), wallet_id: senderWallet.id, type: 'debit', amount, description: `Transfer to ${recipientEmail}`, reference: ref },
-      { id: uuidv4(), wallet_id: recipientWallet.id, type: 'credit', amount, description: `Transfer from sender`, reference: uuidv4() },
+      { id: randomUUID(), wallet_id: senderWallet.id, type: 'debit', amount, description: `Transfer to ${recipientEmail}`, reference: ref },
+      { id: randomUUID(), wallet_id: recipientWallet.id, type: 'credit', amount, description: `Transfer from sender`, reference: randomUUID() },
     ]);
 
     return { message: 'Transfer successful' };
@@ -68,12 +68,12 @@ export const withdrawFunds = async (userId: string, amount: number) => {
     await trx('wallets').where({ id: wallet.id }).update({ balance: newBalance });
 
     await trx('transactions').insert({
-      id: uuidv4(),
+      id: randomUUID(),
       wallet_id: wallet.id,
       type: 'debit',
       amount,
       description: 'Withdrawal',
-      reference: uuidv4(),
+      reference: randomUUID(),
     });
 
     return { balance: newBalance };
